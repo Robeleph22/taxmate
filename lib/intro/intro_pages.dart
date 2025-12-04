@@ -60,12 +60,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      Get.to(() =>  BusinessSetupScreen());
+      Get.to(() =>  TaxSetupWizard());
     }
   }
 
   void _onSkip() {
-    Get.to(() =>  BusinessSetupScreen());
+    Get.to(() =>  TaxSetupWizard());
   }
 
   @override
