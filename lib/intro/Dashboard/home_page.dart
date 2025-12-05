@@ -1,236 +1,437 @@
 import 'package:flutter/material.dart';
-import 'package:taxmate/intro/Dashboard/ai_chatbot.dart';
+import 'package:get/get.dart';
 
+import '../../core/routes/app_routes.dart';
 import 'deadline_detail_page.dart';
+import 'controllers/home_controller.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<HomeController>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const TaxMateScreen()));
+          Get.toNamed(AppRoutes.chatbot);
         },
         backgroundColor: const Color(0xFF184E56),
-        child: Image.asset('assets/Img/img.png', width: 35, height: 35)
+        child: Image.asset('assets/Img/img.png', width: 35, height: 35),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Section with Gradient Look
-            Container(
-              padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 24),
-              decoration: const BoxDecoration(
-                color: Color(0xFF184E56),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
+      body: Obx(() {
+        final state = controller.state.value;
+
+        if (state.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state.isError) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(state.message ?? 'Something went wrong'),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: controller.refreshData,
+                  child: const Text('Retry'),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text("Welcome back,", style: TextStyle(color: Colors.white70, fontSize: 14)),
-                          SizedBox(height: 4),
-                          Text("Abebe Enterprises", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      Stack(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.notifications, color: Colors.white),
-                            onPressed: () {},
-                          ),
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                          ),
-                        ],
-                      )
-                    ],
+              ],
+            ),
+          );
+        }
+
+        if (state.isEmpty || state.data == null) {
+          return const Center(child: Text('No dashboard data'));
+        }
+
+        final data = state.data!;
+
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              // Header Section with Gradient Look
+              Container(
+                padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 24),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF184E56),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
                   ),
-                  const SizedBox(height: 24),
-                  // Next Deadline Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("NEXT DEADLINE", style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
-                              child: const Text("Due in 5 days", style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
+                            const Text(
+                              "Welcome back,",
+                              style: TextStyle(color: Colors.white70, fontSize: 14),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        const Text("VAT Return Filing", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        const Text("Monthly VAT return for Tir 2016", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, color: Colors.white70, size: 14),
-                            const SizedBox(width: 6),
-                            const Text("Tir 30, 2016 (Feb 6)", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                            const Spacer(),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => const DeadlineDetailsScreen()));
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFF184E56),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                                minimumSize: const Size(0, 36),
+                            const SizedBox(height: 4),
+                            Text(
+                              data.businessName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
-                              child: const Text("View Details", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
+                        Stack(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications, color: Colors.white),
+                              onPressed: () {
+                                Get.toNamed(AppRoutes.notifications);
+                              },
+                            ),
+                            if (data.unreadNotifications > 0)
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        )
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Quick Stats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Quick Stats", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
-                      const Text("View All", style: TextStyle(fontSize: 12, color: Colors.blue, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: _buildStatCard("Filed on Time", "12", "+2 this week", Colors.teal)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _buildStatCard("Upcoming", "3", "This month", Colors.orange)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _buildStatCard("Overdue", "0", "Action Needed", Colors.red)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _buildStatCard("Compliance", "98%", "All time", Colors.blue)),
-                    ],
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // This Month's Deadlines
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text("This Month's Deadlines", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
-                      Icon(Icons.keyboard_arrow_down, color: Color(0xFF184E56)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDeadlineCard(
-                    title: "VAT Return Filing",
-                    subtitle: "Monthly VAT return for Tir 2016",
-                    dueDate: "Due Tir 30 (Feb 6)",
-                    daysLeft: "5 days left",
-                    icon: Icons.receipt_long,
-                    color: Colors.orange,
-                    isFiled: false,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildDeadlineCard(
-                    title: "Payroll Tax Payment",
-                    subtitle: "Employee income tax withholding",
-                    dueDate: "Due Tir 7 (Jan 10)",
-                    daysLeft: "12 days left",
-                    icon: Icons.groups,
-                    color: Colors.teal,
-                    isFiled: false,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildDeadlineCard(
-                    title: "Withholding Tax Return",
-                    subtitle: "Not applicable - WHT not enabled",
-                    dueDate: "Due Tir 15 (Jan 22)",
-                    daysLeft: "",
-                    icon: Icons.monetization_on,
-                    color: Colors.grey,
-                    isFiled: false,
-                    isDisabled: true,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Tax Filing Resources
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0F7FA),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(color: const Color(0xFF184E56), borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.school, color: Colors.white),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text("Tax Filing Resources", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF184E56))),
-                              SizedBox(height: 4),
-                              Text("Access guides, forms, and tutorials to help you file correctly.", style: TextStyle(fontSize: 11, color: Colors.black54)),
-                              SizedBox(height: 8),
-                              Text("Browse Resources ->", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
+                    const SizedBox(height: 24),
+                    // Next Deadline Card (static content for now)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "NEXT DEADLINE",
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  "Due in 5 days",
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "VAT Return Filing",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            "Monthly VAT return for Tir 2016",
+                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  color: Colors.white70, size: 14),
+                              const SizedBox(width: 6),
+                              const Text(
+                                "Tir 30, 2016 (Feb 6)",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Get.to(() => const DeadlineDetailsScreen());
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFF184E56),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 0,
+                                  ),
+                                  minimumSize: const Size(0, 36),
+                                ),
+                                child: const Text(
+                                  "View Details",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Quick Stats
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          "Quick Stats",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF184E56),
+                          ),
+                        ),
+                        Text(
+                          "View All",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            "Filed on Time",
+                            data.stats.filedOnTime.toString(),
+                            "+2 this week",
+                            Colors.teal,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatCard(
+                            "Upcoming",
+                            data.stats.upcoming.toString(),
+                            "This month",
+                            Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            "Overdue",
+                            data.stats.overdue.toString(),
+                            "Action Needed",
+                            Colors.red,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatCard(
+                            "Compliance",
+                            "${data.stats.compliancePercent}%",
+                            "All time",
+                            Colors.blue,
+                          ),
+                        ),
+                      ],
+                    ),
 
-                  const SizedBox(height: 32),
-                  const Text("Recent Activity", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
-                  const SizedBox(height: 16),
-                  _buildActivityRow("VAT Return Filed", "Tahsas 2016 • Filed on time", "2 days ago", Colors.green),
-                  _buildActivityRow("Payroll Tax Paid", "Tahsas 2016 • Filed on time", "5 days ago", Colors.green),
-                  _buildActivityRow("Reminder Sent", "VAT Return due in 7 days", "7 days ago", Colors.blueGrey),
-                ],
+                    const SizedBox(height: 32),
+
+                    // This Month's Deadlines (kept static for now)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          "This Month's Deadlines",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF184E56),
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Color(0xFF184E56),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDeadlineCard(
+                      title: "VAT Return Filing",
+                      subtitle: "Monthly VAT return for Tir 2016",
+                      dueDate: "Due Tir 30 (Feb 6)",
+                      daysLeft: "5 days left",
+                      icon: Icons.receipt_long,
+                      color: Colors.orange,
+                      isFiled: false,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDeadlineCard(
+                      title: "Payroll Tax Payment",
+                      subtitle: "Employee income tax withholding",
+                      dueDate: "Due Tir 7 (Jan 10)",
+                      daysLeft: "12 days left",
+                      icon: Icons.groups,
+                      color: Colors.teal,
+                      isFiled: false,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDeadlineCard(
+                      title: "Withholding Tax Return",
+                      subtitle: "Not applicable - WHT not enabled",
+                      dueDate: "Due Tir 15 (Jan 22)",
+                      daysLeft: "",
+                      icon: Icons.monetization_on,
+                      color: Colors.grey,
+                      isFiled: false,
+                      isDisabled: true,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Tax Filing Resources
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F7FA),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF184E56),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child:
+                                const Icon(Icons.school, color: Colors.white),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Tax Filing Resources",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Color(0xFF184E56),
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  "Access guides, forms, and tutorials to help you file correctly.",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  "Browse Resources ->",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF184E56),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+                    const Text(
+                      "Recent Activity",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF184E56),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildActivityRow(
+                      "VAT Return Filed",
+                      "Tahsas 2016 • Filed on time",
+                      "2 days ago",
+                      Colors.green,
+                    ),
+                    _buildActivityRow(
+                      "Payroll Tax Paid",
+                      "Tahsas 2016 • Filed on time",
+                      "5 days ago",
+                      Colors.green,
+                    ),
+                    _buildActivityRow(
+                      "Reminder Sent",
+                      "VAT Return due in 7 days",
+                      "7 days ago",
+                      Colors.blueGrey,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      }),
     );
   }
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import 'controllers/setup_controller.dart';
 import 'main_app_screen.dart';
+
 
 class TaxSetupWizard extends StatefulWidget {
   const TaxSetupWizard({super.key});
@@ -12,6 +15,8 @@ class TaxSetupWizard extends StatefulWidget {
 class _TaxSetupWizardState extends State<TaxSetupWizard> {
   int _currentStep = 0;
   final int _totalSteps = 7;
+
+  late final SetupController _setupController;
 
   // Controllers for inputs (Simplified for UI demo)
   final TextEditingController _businessNameController = TextEditingController();
@@ -34,11 +39,50 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
   final Color _warningBgColor = const Color(0xFFFFF8E1);
   final Color _infoBgColor = const Color(0xFFE0F7FA);
 
+  @override
+  void initState() {
+    super.initState();
+    _setupController = Get.find<SetupController>();
+    _setupController.setStep(_currentStep);
+  }
+
   void _nextStep() {
+    // When user finishes the last step, save their business profile
+    if (_currentStep == _totalSteps - 1) {
+      final String businessName = _businessNameController.text.trim();
+      final double turnover = double.tryParse(
+        _turnoverController.text.replaceAll(',', '').trim(),
+      ) ??
+          0.0;
+
+      final bool vatRegistered = _selectedObligations.contains('VAT');
+      final bool hasEmployees = _selectedObligations.contains('Employees');
+      final bool isWithholdingAgent =
+      _selectedObligations.contains('Withholding');
+
+      _setupController.completeSetup(
+        businessName: businessName,
+        businessType: _selectedBusinessType,
+        taxpayerCategory: _selectedCategory,
+        estimatedTurnover: turnover,
+        vatRegistered: vatRegistered,
+        hasEmployees: hasEmployees,
+        isWithholdingAgent: isWithholdingAgent,
+        fiscalYearEnd: _selectedFiscalMonth,
+      );
+
+      setState(() {
+        _currentStep++;
+      });
+      _setupController.setStep(_currentStep);
+      return;
+    }
+
     if (_currentStep < _totalSteps) {
       setState(() {
         _currentStep++;
       });
+      _setupController.setStep(_currentStep);
     }
   }
 
@@ -47,6 +91,7 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
       setState(() {
         _currentStep--;
       });
+      _setupController.setStep(_currentStep);
     } else {
       Navigator.pop(context);
     }
@@ -78,7 +123,7 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
             fontWeight: FontWeight.w500,
           ),
         ),
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SafeArea(
         child: Column(
@@ -112,6 +157,25 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
               ),
             ),
 
+            // Step indicator
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+              child: Row(
+                children: [
+                  Text(
+                    "Set up your business",
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  _buildStepChip(),
+                ],
+              ),
+            ),
+
             // Main Content Area
             Expanded(
               child: SingleChildScrollView(
@@ -138,7 +202,7 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
                         elevation: 0,
                       ),
                       child: Text(
-                        _currentStep == _totalSteps - 1 ? "Finish Setup" : "Continue",
+                        _currentStep == _totalSteps - 1 ? "Finish setup" : "Continue",
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -147,15 +211,15 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   if (_currentStep < _totalSteps - 1)
-                    GestureDetector(
-                      onTap: _nextStep, // Skip logic could be different
+                    TextButton(
+                      onPressed: _nextStep,
                       child: Text(
                         "Skip for now",
                         style: TextStyle(
                           color: Colors.grey[600],
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -165,6 +229,68 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStepChip() {
+    String label;
+    IconData icon;
+
+    switch (_currentStep) {
+      case 0:
+        label = "Business Profile";
+        icon = Icons.business_center_outlined;
+        break;
+      case 1:
+        label = "Taxpayer Category";
+        icon = Icons.category_outlined;
+        break;
+      case 2:
+        label = "Turnover & Size";
+        icon = Icons.trending_up_outlined;
+        break;
+      case 3:
+        label = "Tax Obligations";
+        icon = Icons.receipt_long_outlined;
+        break;
+      case 4:
+        label = "Fiscal Year";
+        icon = Icons.calendar_today_outlined;
+        break;
+      case 5:
+        label = "Compliance Check";
+        icon = Icons.verified_user_outlined;
+        break;
+      case 6:
+        label = "Review";
+        icon = Icons.check_circle_outline;
+        break;
+      default:
+        label = "Setup";
+        icon = Icons.settings_outlined;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _cardBorderColor),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: _primaryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -195,10 +321,13 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader("Set Up Your Business Profile",
-            "Help us understand your business to provide accurate tax reminders"),
-        const SizedBox(height: 32),
+        _buildHeader(
+          "Business Profile",
+          "Tell us about your business so we can set up the right tax reminders for you.",
+        ),
+        const SizedBox(height: 24),
         _buildLabel("Business Name"),
+        const SizedBox(height: 8),
         TextField(
           controller: _businessNameController,
           decoration: _inputDecoration("Enter your business name"),
@@ -226,9 +355,9 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
         _buildInfoBox(
           icon: Icons.info_outline,
           title: "Why do we need this?",
-          text: "Different business types have different tax obligations in Ethiopia. This helps us set up the right reminders.",
+          text:
+          "Different business types have different tax obligations in Ethiopia. This helps us set up the right reminders.",
           bgColor: _infoBgColor,
-          iconColor: _primaryColor,
         ),
       ],
     );
@@ -239,10 +368,12 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader("Taxpayer Category",
-            "Select your taxpayer category as registered with the Ethiopian Ministry of Revenue"),
+        _buildHeader(
+          "Taxpayer Category",
+          "Select your taxpayer category as registered with the Ethiopian Ministry of Revenue",
+        ),
         const SizedBox(height: 24),
-        _buildSelectableCard(
+        _buildCategoryCard(
           isSelected: _selectedCategory == 'A',
           onTap: () => setState(() => _selectedCategory = 'A'),
           title: "Category A",
@@ -261,84 +392,92 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _buildSelectableCard(
+        const SizedBox(height: 12),
+        _buildCategoryCard(
           isSelected: _selectedCategory == 'B',
           onTap: () => setState(() => _selectedCategory = 'B'),
           title: "Category B",
-          content: Text(
-            "Medium taxpayers with annual turnover between ETB 1 million and ETB 100 million.",
-            style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.5),
-          ),
-        ),
-        const SizedBox(height: 24),
-        _buildInfoBox(
-          icon: Icons.lightbulb_outline,
-          title: "Not sure which category?",
-          text: "Check your Tax Identification Number (TIN) certificate or contact your local tax office.",
-          bgColor: _warningBgColor,
-          iconColor: Colors.orange,
-        ),
-      ],
-    );
-  }
-
-  // --- Step 3: Annual Turnover ---
-  Widget _buildStep3Turnover() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHeader("Annual Turnover",
-            "Provide your estimated annual turnover to help us determine your tax obligations"),
-        const SizedBox(height: 32),
-        _buildLabel("Estimated Annual Turnover (ETB)"),
-        TextField(
-          controller: _turnoverController,
-          keyboardType: TextInputType.number,
-          decoration: _inputDecoration("0.00").copyWith(
-            prefixIcon: const Padding(
-              padding: EdgeInsets.all(14.0),
-              child: Text("ETB", style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(Icons.info_outline, size: 14, color: _primaryColor),
-            const SizedBox(width: 4),
-            Text("This is an estimate. You can update it later.",
-                style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _infoBgColor.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
+          content: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Quick Reference:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(
+                "Medium taxpayers with moderate turnover and standard compliance requirements.",
+                style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.5),
+              ),
               const SizedBox(height: 12),
-              _buildRefRow("Category A (Large)", "> ETB 100M"),
-              const SizedBox(height: 8),
-              _buildRefRow("Category B (Medium)", "ETB 1M - 100M"),
-              const SizedBox(height: 8),
-              _buildRefRow("Category C (Small)", "< ETB 1M"),
+              _buildBulletPoint("Monthly or quarterly VAT"),
+              _buildBulletPoint("Annual income tax return"),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _buildCategoryCard(
+          isSelected: _selectedCategory == 'C',
+          onTap: () => setState(() => _selectedCategory = 'C'),
+          title: "Category C",
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Small taxpayers and micro businesses with simplified obligations.",
+                style: TextStyle(color: Colors.grey[700], fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              _buildBulletPoint("Simplified reporting"),
+              _buildBulletPoint("Annual income tax return"),
             ],
           ),
         ),
         const SizedBox(height: 24),
         _buildInfoBox(
-          icon: Icons.shield_outlined,
+          icon: Icons.lock_outline,
           title: "Your data is secure",
-          text: "We use this information only to calculate your tax deadlines. Your financial data is encrypted.",
+          text:
+          "We use this information only to calculate your tax deadlines. Your financial data is encrypted.",
           bgColor: Colors.grey[100]!,
-          iconColor: _primaryColor,
         ),
+      ],
+    );
+  }
+
+  // --- Step 3: Turnover & Size ---
+  Widget _buildStep3Turnover() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(
+          "Turnover & Business Size",
+          "This helps us understand your filing frequency and obligations.",
+        ),
+        const SizedBox(height: 24),
+        _buildLabel("Estimated Annual Turnover (ETB)"),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _turnoverController,
+          keyboardType: TextInputType.number,
+          decoration: _inputDecoration("e.g. 1,500,000"),
+        ),
+        const SizedBox(height: 24),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _infoBgColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.lightbulb_outline, size: 20, color: _primaryColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "If you're not sure, provide your best estimate. You can update this later in settings.",
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                ),
+              ),
+            ],
+          ),
+        )
       ],
     );
   }
@@ -390,11 +529,11 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
         ),
         const SizedBox(height: 24),
         _buildInfoBox(
-          icon: Icons.help_outline,
+          icon: Icons.info_outline,
           title: "Need help?",
-          text: "If you're unsure about any of these, you can check your tax registration certificate.",
+          text:
+          "If you're unsure about any of these, you can check your tax registration certificate.",
           bgColor: _warningBgColor,
-          iconColor: Colors.orange,
         ),
       ],
     );
@@ -405,9 +544,13 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader("Fiscal Year End", "When does your business fiscal year end?"),
-        const SizedBox(height: 32),
-        _buildLabel("Fiscal Year End Date"),
+        _buildHeader(
+          "Fiscal Year End",
+          "Choose the month when your fiscal year ends so we can remind you of annual filings.",
+        ),
+        const SizedBox(height: 24),
+        _buildLabel("Fiscal Year End (Month)"),
+        const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -429,17 +572,17 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
         _buildInfoBox(
           icon: Icons.calendar_today,
           title: "What is a fiscal year?",
-          text: "Your fiscal year is the 12-month period used for accounting. Most Ethiopian businesses follow Hamle 30.",
+          text:
+          "Your fiscal year is the 12-month period used for accounting. Most Ethiopian businesses follow Hamle 30.",
           bgColor: _infoBgColor,
-          iconColor: _primaryColor,
         ),
         const SizedBox(height: 16),
         _buildInfoBox(
           icon: Icons.lightbulb_outline,
           title: "Why this matters",
-          text: "Your fiscal year end determines when your annual income tax return is due.",
+          text:
+          "Your fiscal year end determines when your annual income tax return is due.",
           bgColor: Colors.grey[50]!,
-          iconColor: _primaryColor,
         ),
         const SizedBox(height: 16),
         Container(
@@ -447,19 +590,17 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
           decoration: BoxDecoration(
             color: _warningBgColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.withOpacity(0.3)),
+            border: Border.all(color: Colors.orange.withOpacity(0.2)),
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Icon(Icons.access_time_filled, color: Colors.orange, size: 20),
+              Icon(Icons.warning_amber_outlined, color: Colors.orange),
               SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Annual Income Tax Deadline", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    Text("Due 4 months after fiscal year end", style: TextStyle(fontSize: 12)),
-                  ],
+                child: Text(
+                  "If your business uses a special fiscal year, make sure it's correctly registered with the Ministry of Revenue.",
+                  style: TextStyle(fontSize: 13),
                 ),
               ),
             ],
@@ -469,115 +610,61 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     );
   }
 
-  // --- Step 6: Initial Compliance ---
+  // --- Step 6: Compliance Check ---
   Widget _buildStep6Compliance() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildHeader("Initial Compliance Status", "Help us track your current compliance status"),
+        _buildHeader(
+          "Compliance Check",
+          "This helps us understand your current filing status.",
+        ),
         const SizedBox(height: 24),
-
-        // VAT Card
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: _infoBgColor, width: 2),
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.white,
+        if (_selectedObligations.contains('VAT')) ...[
+          _buildLabel("Last VAT filing date (optional)"),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _vatDateController,
+            decoration: _inputDecoration("e.g. 2025-10-30"),
           ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 24),
+        ],
+        if (_selectedObligations.contains('Employees')) ...[
+          _buildLabel("Pension Contributions"),
+          const SizedBox(height: 8),
+          Row(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(backgroundColor: _primaryColor, radius: 14, child: const Icon(Icons.inventory_2, size: 16, color: Colors.white)),
-                  const SizedBox(width: 10),
-                  const Text("VAT Filing Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
+              Expanded(
+                child: _buildRadioBtn("Yes", true),
               ),
-              const SizedBox(height: 16),
-              _buildLabel("Last VAT Filing Date"),
-              TextField(
-                controller: _vatDateController,
-                decoration: _inputDecoration("mm/dd/yyyy").copyWith(
-                  suffixIcon: const Icon(Icons.calendar_month, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text("When did you last file your VAT return?", style: TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(8)),
-                child: Row(
-                  children: [
-                    const Text("Current Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.green[100], borderRadius: BorderRadius.circular(4)),
-                      child: const Text("Up to Date", style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildRadioBtn("No", false),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 24),
-
-        // Pension Card
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: _infoBgColor, width: 2),
-            borderRadius: BorderRadius.circular(16),
-            color: Colors.white,
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(backgroundColor: _primaryColor, radius: 14, child: const Icon(Icons.groups, size: 16, color: Colors.white)),
-                  const SizedBox(width: 10),
-                  const Text("Pension Contributions", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text("Are you currently making pension contributions for your employees?", style: TextStyle(fontSize: 13, color: Colors.grey)),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildRadioBtn("Yes", true)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildRadioBtn("No", false)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: _cardBorderColor),
-                  borderRadius: BorderRadius.circular(8),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blueGrey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info, size: 16, color: _primaryColor),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    "Employers are required to contribute 11% of gross salary to the POEPF.",
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info, size: 16, color: _primaryColor),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        "Employers are required to contribute 11% of gross salary to the POEPF.",
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(16),
@@ -589,16 +676,12 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Icon(Icons.privacy_tip, color: Colors.orange, size: 20),
+              Icon(Icons.announcement_outlined, color: Colors.orange),
               SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Privacy Notice", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    SizedBox(height: 4),
-                    Text("This information helps us provide accurate reminders. Your data is kept confidential.", style: TextStyle(fontSize: 12)),
-                  ],
+                child: Text(
+                  "Don't worry—your answers here only help us tailor reminders. They are not reported to any authority.",
+                  style: TextStyle(fontSize: 13),
                 ),
               ),
             ],
@@ -608,78 +691,68 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     );
   }
 
-  // --- Step 7: Review ---
+  // --- Step 7: Review & Confirm ---
   Widget _buildStep7Review() {
+    final categoryLabel = _selectedCategory == 'A'
+        ? "Category A"
+        : _selectedCategory == 'B'
+        ? "Category B"
+        : "Category C";
+
+    final obligations = [
+      if (_selectedObligations.contains('VAT')) "VAT Registered",
+      if (_selectedObligations.contains('Employees')) "Has Employees",
+      if (_selectedObligations.contains('Withholding')) "Withholding Agent",
+    ].join(" • ");
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CircleAvatar(
-          radius: 30,
-          backgroundColor: Color(0xFF184E56),
-          child: Icon(Icons.check, color: Colors.white, size: 30),
+        _buildHeader(
+          "Review your setup",
+          "Make sure everything looks correct before we generate your calendar.",
         ),
-        const SizedBox(height: 16),
-        const Text("Review Your Profile", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
-        const SizedBox(height: 8),
-        Text("Make sure everything looks correct", style: TextStyle(color: Colors.grey[600])),
-        const SizedBox(height: 32),
-
-        _buildReviewSection("BUSINESS INFORMATION", [
-          _buildReviewRow("Business Name", "Addis Tech Solutions PLC"),
-          _buildReviewRow("Business Type", "Private Limited Company"),
-        ]),
-        const SizedBox(height: 16),
-        _buildReviewSection("TAX CATEGORY", [
-          _buildReviewRow("Taxpayer Category", "Category A (Large)"),
-          _buildReviewRow("Annual Turnover", "ETB 150,000,000"),
-        ]),
-        const SizedBox(height: 16),
-        _buildReviewSection("TAX OBLIGATIONS", [
-          Row(children: const [Icon(Icons.check_circle, size: 16, color: Color(0xFF184E56)), SizedBox(width: 8), Text("VAT Registered", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))]),
-          const SizedBox(height: 8),
-          Row(children: const [Icon(Icons.check_circle, size: 16, color: Color(0xFF184E56)), SizedBox(width: 8), Text("Has Employees", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))]),
-        ]),
-        const SizedBox(height: 16),
-        _buildReviewSection("FISCAL YEAR", [
-          _buildReviewRow("Year End Date", "Hamle 30 (July 7)"),
-        ]),
-
         const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _warningBgColor,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const CircleAvatar(
-                radius: 16,
-                backgroundColor: Color(0xFFFFCC80),
-                child: Icon(Icons.notifications_active, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Your reminders are ready!", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    RichText(
-                      text: TextSpan(
-                        style: TextStyle(color: Colors.grey[800], fontSize: 12, height: 1.5),
-                        children: const [
-                          TextSpan(text: "Based on your profile, we've set up "),
-                          TextSpan(text: "8 tax deadlines", style: TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: " with smart reminders to keep you compliant."),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        _buildReviewCard(
+          title: "Business Profile",
+          subtitle: _businessNameController.text.isEmpty
+              ? "No business name entered"
+              : _businessNameController.text,
+          trailing: _selectedBusinessType,
+        ),
+        const SizedBox(height: 12),
+        _buildReviewCard(
+          title: "Taxpayer Category",
+          subtitle: categoryLabel,
+          trailing: "Based on your selection",
+        ),
+        const SizedBox(height: 12),
+        _buildReviewCard(
+          title: "Turnover & Size",
+          subtitle: _turnoverController.text.isEmpty
+              ? "No turnover entered"
+              : "Estimated: ${_turnoverController.text} ETB",
+          trailing: "Can be updated later",
+        ),
+        const SizedBox(height: 12),
+        _buildReviewCard(
+          title: "Tax Obligations",
+          subtitle: obligations.isEmpty ? "None selected" : obligations,
+          trailing: "Used for reminders",
+        ),
+        const SizedBox(height: 12),
+        _buildReviewCard(
+          title: "Fiscal Year End",
+          subtitle: _selectedFiscalMonth,
+          trailing: "Determines annual deadlines",
+        ),
+        const SizedBox(height: 24),
+        _buildInfoBox(
+          icon: Icons.lock_outline,
+          title: "Your information is private",
+          text:
+          "Only you can see this setup inside TaxMate. We use it solely to power your smart tax calendar.",
+          bgColor: Colors.grey[100]!,
         ),
       ],
     );
@@ -688,140 +761,245 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
   // --- Success Screen ---
   Widget _buildSuccessScreen() {
     return Scaffold(
-      backgroundColor: const Color(0xFFE0F7FA), // Light teal bg
+      backgroundColor: _backgroundColor,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    const CircleAvatar(
-                      radius: 40,
-                      backgroundColor: Color(0xFF184E56),
-                      child: Icon(Icons.rocket_launch, color: Colors.white, size: 40),
-                    ),
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
-                        child: const Icon(Icons.star, color: Colors.white, size: 14),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Color(0xFF184E56)),
+                  onPressed: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const MainAppScreen(),
                       ),
-                    )
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.check_circle,
+                              size: 80, color: Color(0xFF26A69A)),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                                color: Colors.amber, shape: BoxShape.circle),
+                            child: const Icon(Icons.star,
+                                color: Colors.white, size: 14),
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Text("You're All Set!",
+                        style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF184E56))),
+                    const SizedBox(height: 12),
+                    Text(
+                      "TaxMate is now tracking your tax deadlines and will send you timely reminders.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[700], height: 1.5),
+                    ),
+                    const SizedBox(height: 32),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          _buildSuccessRow(Icons.calendar_month,
+                              "8 Deadlines Tracked", "Next: VAT Filing - Dec 15"),
+                          const SizedBox(height: 12),
+                          _buildSuccessRow(Icons.notifications_active,
+                              "Smart Reminders Enabled", "You’ll get notified ahead of time"),
+                          const SizedBox(height: 12),
+                          _buildSuccessRow(Icons.chat_bubble_outline,
+                              "AI Tax Assistant Ready", "Ask questions about your obligations"),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const MainAppScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          "Go to my dashboard",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          _currentStep = 0;
+                        });
+                        _setupController.setStep(_currentStep);
+                      },
+                      child: Text(
+                        "Review my setup",
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
-                const SizedBox(height: 24),
-                const Text("You're All Set!", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
-                const SizedBox(height: 12),
-                Text(
-                  "TaxMate is now tracking your tax deadlines and will send you timely reminders.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[700], height: 1.5),
-                ),
-                const SizedBox(height: 32),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
-                  ),
-                  child: Column(
-                    children: [
-                      _buildSuccessRow(Icons.calendar_month, "8 Deadlines Tracked", "Next: VAT Filing - Dec 15"),
-                      const Divider(height: 32),
-                      _buildSuccessRow(Icons.info_outline, "Smart Reminders Active", "7, 3, and 1 day alerts"),
-                      const Divider(height: 32),
-                      _buildSuccessRow(Icons.shield_outlined, "Stay Compliant", "Never miss a deadline again"),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    // In tax_setup_wizard.dart, inside _buildSuccessScreen
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => const MainAppScreen()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: const Text("Go to Dashboard ->", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text("Start managing your tax obligations today", style: TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  // --- Helper Widgets ---
+  // --- UI Helpers ---
 
   Widget _buildHeader(String title, String subtitle) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _primaryColor)),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF184E56))),
         const SizedBox(height: 8),
-        Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.5)),
+        Text(
+          subtitle,
+          style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4),
+        ),
       ],
     );
   }
 
   Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
+    return Text(
+      text,
+      style: const TextStyle(
+        fontWeight: FontWeight.w600,
+        fontSize: 14,
+        color: Color(0xFF184E56),
+      ),
     );
   }
 
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.grey[400]),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _cardBorderColor)),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _cardBorderColor)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _primaryColor, width: 2)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: _cardBorderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: _cardBorderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: _selectedBorderColor, width: 1.5),
+      ),
     );
   }
 
-  Widget _buildInfoBox({required IconData icon, required String title, required String text, required Color bgColor, required Color iconColor}) {
+  Widget _buildInfoBox({
+    required IconData icon,
+    required String title,
+    required String text,
+    required Color bgColor,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.5),
+        color: bgColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: bgColor == _warningBgColor ? Colors.orange.withOpacity(0.1) : Colors.transparent),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 20),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: _primaryColor),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(text, style: TextStyle(fontSize: 12, color: Colors.grey[800], height: 1.4)),
+                Text(
+                  text,
+                  style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -830,15 +1008,32 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     );
   }
 
-  Widget _buildSelectableCard({required bool isSelected, required VoidCallback onTap, required String title, String? badgeText, required Widget content}) {
+  Widget _buildCategoryCard({
+    required bool isSelected,
+    required VoidCallback onTap,
+    required String title,
+    String? badgeText,
+    required Widget content,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? _selectedBorderColor : _cardBorderColor, width: isSelected ? 1.5 : 1),
+          border: Border.all(
+            color: isSelected ? _selectedBorderColor : _cardBorderColor,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: _selectedBorderColor.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -848,17 +1043,31 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
               children: [
                 Row(
                   children: [
-                    Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: isSelected ? _selectedBorderColor : Colors.grey[300]),
+                    Icon(
+                        isSelected
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: isSelected
+                            ? _selectedBorderColor
+                            : Colors.grey[300]),
                     const SizedBox(width: 12),
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(title,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
                 if (badgeText != null && isSelected)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(color: _selectedBorderColor, borderRadius: BorderRadius.circular(20)),
-                    child: Text(badgeText, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: _selectedBorderColor,
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Text(badgeText,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold)),
                   ),
               ],
             ),
@@ -875,15 +1084,34 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
       padding: const EdgeInsets.only(bottom: 6.0),
       child: Row(
         children: [
-          const Icon(Icons.circle, size: 4, color: Colors.grey),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              color: _primaryColor,
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
           const SizedBox(width: 8),
-          Text(text, style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: Colors.grey[700], fontSize: 12),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCheckboxCard({required String title, required String subtitle, required IconData icon, required bool isSelected, required VoidCallback onTap, required String footer}) {
+  Widget _buildCheckboxCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+    String? footer,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -891,82 +1119,97 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isSelected ? _selectedBorderColor : _cardBorderColor, width: isSelected ? 1.5 : 1),
+          border: Border.all(
+            color: isSelected ? _selectedBorderColor : _cardBorderColor,
+            width: isSelected ? 1.5 : 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: _infoBgColor, borderRadius: BorderRadius.circular(8)),
-                  child: Icon(icon, color: _primaryColor, size: 20),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? _selectedBorderColor.withOpacity(0.08)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: isSelected ? _selectedBorderColor : Colors.grey[500],
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text(title,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 4),
-                      Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                      Text(
+                        subtitle,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      ),
                     ],
                   ),
                 ),
-                Icon(isSelected ? Icons.check_circle : Icons.circle_outlined, color: isSelected ? _selectedBorderColor : Colors.grey[300]),
+                const SizedBox(width: 8),
+                Icon(
+                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                  color: isSelected ? _selectedBorderColor : Colors.grey[400],
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.calendar_month, size: 12, color: _primaryColor),
-                const SizedBox(width: 4),
-                Text(footer, style: TextStyle(color: _primaryColor, fontSize: 11, fontWeight: FontWeight.w500)),
-              ],
-            ),
+            if (footer != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                footer,
+                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              ),
+            ]
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRefRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(color: Colors.grey[700], fontSize: 12)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-      ],
     );
   }
 
   Widget _buildRadioBtn(String label, bool value) {
-    bool isSelected = _pensionContributions == value;
+    final selected = _pensionContributions == value;
     return GestureDetector(
       onTap: () => setState(() => _pensionContributions = value),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          border: Border.all(color: isSelected ? _primaryColor : _cardBorderColor),
-          borderRadius: BorderRadius.circular(8),
-          color: isSelected ? _primaryColor.withOpacity(0.05) : Colors.white,
+          color: selected ? _selectedBorderColor : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? _selectedBorderColor : _cardBorderColor,
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(isSelected ? Icons.check_circle : Icons.circle_outlined,
-                size: 18, color: isSelected ? _primaryColor : Colors.grey[400]),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? _primaryColor : Colors.grey[700])),
-          ],
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.grey[700],
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildReviewSection(String title, List<Widget> children) {
+  Widget _buildReviewCard({
+    required String title,
+    required String subtitle,
+    required String trailing,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -974,31 +1217,31 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _cardBorderColor),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(title, style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.bold)),
-              const Text("Edit", style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
+              Text(trailing,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 11)),
             ],
           ),
-          const SizedBox(height: 12),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReviewRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         ],
       ),
     );
@@ -1008,7 +1251,7 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(color: _infoBgColor, borderRadius: BorderRadius.circular(12)),
           child: Icon(icon, color: _primaryColor),
         ),

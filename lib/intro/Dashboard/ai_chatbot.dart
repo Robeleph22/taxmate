@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import 'controllers/chatbot_controller.dart';
 
 class TaxMateScreen extends StatelessWidget {
   const TaxMateScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ChatbotController>();
+    final TextEditingController inputController = TextEditingController();
+
     // Define exact colors from the screenshot
     final Color primaryTeal = const Color(0xFF539E95); // The main teal color
-    final Color darkText = const Color(0xFF1B2C40);    // Dark blue/black text
+    final Color darkText = const Color(0xFF1B2C40); // Dark blue/black text
     final Color secondaryText = const Color(0xFF6B7280); // Grey description text
     final Color backgroundColor = const Color(0xFFF1F8F9); // Light blueish background
     final Color cardBorderColor = const Color(0xFFE0EBEB); // Light border for cards
@@ -20,7 +26,10 @@ class TaxMateScreen extends StatelessWidget {
             // Scrollable Content Area
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 20.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -139,10 +148,10 @@ class TaxMateScreen extends StatelessWidget {
               child: Row(
                 children: [
                   // Attachment Button
-                  _CircleButton(
+                  const _CircleButton(
                     icon: Icons.attach_file,
-                    color: const Color(0xFFEEF5F5),
-                    iconColor: const Color(0xFF5A7575),
+                    color: Color(0xFFEEF5F5),
+                    iconColor: Color(0xFF5A7575),
                   ),
 
                   const SizedBox(width: 12),
@@ -157,14 +166,19 @@ class TaxMateScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       alignment: Alignment.centerLeft,
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: inputController,
+                        decoration: const InputDecoration(
                           hintText: 'Type your question...',
                           hintStyle: TextStyle(color: Color(0xFF9CA3AF)),
                           border: InputBorder.none,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
+                        onSubmitted: (value) {
+                          controller.sendMessage(value);
+                          inputController.clear();
+                        },
                       ),
                     ),
                   ),
@@ -172,10 +186,10 @@ class TaxMateScreen extends StatelessWidget {
                   const SizedBox(width: 12),
 
                   // Mic Button
-                  _CircleButton(
+                  const _CircleButton(
                     icon: Icons.mic_none,
-                    color: const Color(0xFFEEF5F5),
-                    iconColor: const Color(0xFF5A7575),
+                    color: Color(0xFFEEF5F5),
+                    iconColor: Color(0xFF5A7575),
                   ),
 
                   const SizedBox(width: 12),
@@ -185,6 +199,10 @@ class TaxMateScreen extends StatelessWidget {
                     icon: Icons.send_rounded,
                     color: primaryTeal,
                     iconColor: Colors.white,
+                    onTap: () {
+                      controller.sendMessage(inputController.text);
+                      inputController.clear();
+                    },
                   ),
                 ],
               ),
@@ -275,23 +293,29 @@ class _CircleButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Color iconColor;
+  final VoidCallback? onTap;
 
   const _CircleButton({
     required this.icon,
     required this.color,
     required this.iconColor,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: iconColor, size: 22),
       ),
-      child: Icon(icon, color: iconColor, size: 22),
     );
   }
 }
