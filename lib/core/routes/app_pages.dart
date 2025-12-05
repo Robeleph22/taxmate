@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-
+import '../../intro/intro_pages.dart';
 import '../../intro/Dashboard/ai_chatbot.dart';
 import '../../intro/Dashboard/calander_page.dart';
 import '../../intro/Dashboard/home_page.dart';
@@ -18,6 +18,10 @@ import 'app_routes.dart';
 
 class AppPages {
   static final pages = <GetPage<dynamic>>[
+    GetPage(
+      name: AppRoutes.onboarding,
+      page: () => const OnboardingScreen(),
+    ),
     GetPage(
       name: AppRoutes.home,
       page: () => const DashboardScreen(),

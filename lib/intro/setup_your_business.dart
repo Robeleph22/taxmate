@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 import 'controllers/setup_controller.dart';
 import 'main_app_screen.dart';
-
 
 class TaxSetupWizard extends StatefulWidget {
   const TaxSetupWizard({super.key});
@@ -16,7 +16,8 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
   int _currentStep = 0;
   final int _totalSteps = 7;
 
-  late final SetupController _setupController;
+  // Remove late init; we’ll resolve the controller lazily with Get.find()
+  // late final SetupController _setupController;
 
   // Controllers for inputs (Simplified for UI demo)
   final TextEditingController _businessNameController = TextEditingController();
@@ -42,9 +43,10 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
   @override
   void initState() {
     super.initState();
-    _setupController = Get.find<SetupController>();
-    _setupController.setStep(_currentStep);
+    // Do not call Get.find here; bindings may not have run yet.
   }
+
+  SetupController get _setupController => Get.find<SetupController>();
 
   void _nextStep() {
     // When user finishes the last step, save their business profile
@@ -58,7 +60,7 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
       final bool vatRegistered = _selectedObligations.contains('VAT');
       final bool hasEmployees = _selectedObligations.contains('Employees');
       final bool isWithholdingAgent =
-      _selectedObligations.contains('Withholding');
+          _selectedObligations.contains('Withholding');
 
       _setupController.completeSetup(
         businessName: businessName,
@@ -99,6 +101,9 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure controller step is in sync whenever we build
+    _setupController.setStep(_currentStep);
+
     // If we are on the "Success" screen (index 7), show that instead of the wizard scaffold
     if (_currentStep == _totalSteps) {
       return _buildSuccessScreen();
@@ -864,10 +869,12 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
                       height: 56,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const MainAppScreen(),
-                            ),
+                          final box = GetStorage();
+                          box.write('hasCompletedOnboarding', true); // 👈 mark onboarding done
+
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const MainAppScreen()),
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -1267,3 +1274,4 @@ class _TaxSetupWizardState extends State<TaxSetupWizard> {
     );
   }
 }
+

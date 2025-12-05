@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+
+import 'main_app_screen.dart';
 import 'package:taxmate/intro/setup_your_business.dart';
+import '../core/routes/app_routes.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({Key? key}) : super(key: key);
@@ -12,7 +16,26 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController(initialPage: 0);
   int _currentPage = 0;
+  @override
+  void initState() {
+    super.initState();
+    _checkIfOnboardingCompleted();
+  }
 
+  void _checkIfOnboardingCompleted() {
+    final box = GetStorage();
+    final hasCompleted = box.read('hasCompletedOnboarding') ?? false;
+
+    if (hasCompleted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => const MainAppScreen(),
+          ),
+        );
+      });
+    }
+  }
   // Define the content for each page based on your screenshots
   final List<OnboardingContent> _contents = [
     OnboardingContent(
@@ -60,12 +83,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         curve: Curves.easeInOut,
       );
     } else {
-      Get.to(() =>  TaxSetupWizard());
+      // Use named route so bindings (including SetupController) run correctly
+      Get.offAllNamed(AppRoutes.setup);
     }
   }
 
   void _onSkip() {
-    Get.to(() =>  TaxSetupWizard());
+    // Skip intro and go straight to setup wizard via route + binding
+    Get.offAllNamed(AppRoutes.setup);
   }
 
   @override

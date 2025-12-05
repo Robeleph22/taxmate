@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "806290713632",
+    "project_id": "taxmate-5f5b1",
+    "storage_bucket": "taxmate-5f5b1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:806290713632:android:ee3b7a659d807a7fce2045",
+        "android_client_info": {
+          "package_name": "com.example.taxmate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyzvLHu1ARxIZSTqJz4k11Hc3kgTF848c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
